@@ -14,8 +14,8 @@ In general, to use the tool, please supply the following:
     * file - full path to the bed file you are using as an annotation.	
     * type - One of "bed_score", "bed_closest" or "bed_overlap". This tells the program what to do with the data in the file.
     * annot_size - Optional. You can tell the program how large your annotation file is (in bp). If not, it will run an additional command to calculate the size.
-    * ValueColumn - If you are running "bed_score", this tells the program which column of the bed file as the score value. For example, if you wanted to calculate average conservation over a peak, you need to tell the program which column in the conservation file as the actual conservation value.
-    Function - If you are running a "bed_score" file, you can tell it whether to calculate the mean, max, min, on your interval, for example.
+    * ValueColumn - If you are running "bed_score", this tells the program which column of the bed file to use as the score value. For example, if you wanted to calculate average conservation over a peak, you need to tell the program which column in the conservation file as the actual conservation value.
+    * Function - If you are running a "bed_score" file, you can tell it whether to calculate the mean, max, min, on your interval, for example.
     * Thresh - 
     * EffectiveGenome - Size of effective genome for this annotation. (Will provide a more detailed explanation later.)
     
