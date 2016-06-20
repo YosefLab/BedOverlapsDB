@@ -1,0 +1,8 @@
+#file	type	annot_size	alias	ValueColumn	Function	Thresh	EffectiveGenome
+#/data/yosef/index_files/hg19/annotation/hg19_conservation_avg_in100bpwindows_notnull.bed	bed_score	-1	conservation_100bp_segments	4	mean		2897310462
+#/data/yosef/index_files/hg19/annotation/hg19_conservation_avg_in100bpwindows_notnull.bed	bed_score	-1	conservation_100bp_segments	4	max		2897310462
+#/data/yosef/index_files/hg19/genes/RefSeq_Genes_collapsed.bed	bed_closest	-1	Gene	4			2897310462
+/data/yosef/index_files/hg19/annotation/ORegAnno.bed	bed_overlap	11240209	OregAnno				2897310462
+#/data/yosef/index_files/hg19/annotation/repeats_hg19_ucsc_rmsk_table.bed	bed_overlap	1465724774	Repeats				2897310462
+#/data/yosef/index_files/hg19/annotation/ENCODE_TF_Binding_merged.bed	bed_overlap	-1	ENCODE_TFBinding				2897310462
+/data/yosef/index_files/hg19/annotation/CD8_Epigenome_Roadmap/BI.CD8_Memory_Primary_Cells.H3K27ac.Donor_100_7_pooled_leukopaks_Jan_7_2011.broadPeak	bed_overlap	-1	BI.CD8_Memory_Primary_Cells.H3K27ac.Donor_100_7				2897310462

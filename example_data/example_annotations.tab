@@ -1,0 +1,4 @@
+#file	type	annot_size	alias	ValueColumn	Function	Thresh
+/home/eecs/jimkaminski/sandbox/overlaps_test/example_data/overlap.bed	bed_overlap	-1	OverlapTest			
+/home/eecs/jimkaminski/sandbox/overlaps_test/example_data/score.bed	bed_score	-1	ScoreTest	4	mean	
+/home/eecs/jimkaminski/sandbox/overlaps_test/example_data/closest_feature.bed	bed_closest	-1	ClosestFeatureTest	4		
