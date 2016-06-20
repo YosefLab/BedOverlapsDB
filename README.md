@@ -34,6 +34,7 @@ Output:
 
 2. overlaps.tab - Lists each interval in your original bed file, and the corresponding data for each value.
 
-Some notes:
-*This should work on s121-s123. I think we are currently missing the optparse package on s124, so R crashes on s124.
-*The program currently makes an "out" folder which contains a tmp directory. I will update the code to delete this in the future.
+##Some notes:
+* This should work on s121-s123. I think we are currently missing the optparse package on s124, so R crashes on s124.
+
+* The program currently makes an "out" folder which contains a tmp directory. I will update the code to delete this in the future.
