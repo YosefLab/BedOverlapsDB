@@ -17,6 +17,8 @@ Output (Three Tables)
 ** Tidy csv file for Shiny (Construct in R, pass macs2qval, maxfragsize, and sample name as args)
 """
 import argparse
+import glob
+import sys
 import os
 import subprocess as sp
 import pandas as pd
@@ -296,7 +298,7 @@ def ProcessAnnotation_Overlap(bedIn,bedAnnotFile,bedOut,iSizeAnnot,cmdBedtools,a
 #############################################################################
 
 dirOut = args.dirOut
-dirTmp = args.dirOut + os.sep + "tmp"
+dirTmp = args.dirOut + os.sep + "tmp_files_for_bedoverlaps"
 check_create_dir( dirOut )
 check_create_dir( dirTmp )
 astrFilesToDelete = []
@@ -396,3 +398,12 @@ sp.call(astrCMD)
 # Cleanup
 for strFile in astrFilesToDelete:
     os.remove(strFile)
+
+sys.stderr.write("Cleaning up... \n")
+for strFile in glob.glob(dirTmp + "/*"):
+    sys.stderr.write("Deleting " + strFile + "\n")
+    os.remove(strFile)
+    
+os.rmdir(dirTmp)
+
+    

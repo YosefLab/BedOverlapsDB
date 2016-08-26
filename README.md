@@ -37,4 +37,3 @@ Output:
 ##Some notes:
 * This should work on s121-s123. I think we are currently missing the optparse package on s124, so R crashes on s124.
 
-* The program currently makes an "out" folder which contains a tmp directory. I will update the code to delete this in the future.
