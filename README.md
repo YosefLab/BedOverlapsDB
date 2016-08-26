@@ -3,7 +3,7 @@
 This will be replaced by a more detailed instruction manual in the future. For now, if you wish to use this program please download/clone the repository and run this command to determine if it works on your system:
 
 ```
-python OverlapAnnotationsWithBed.py --annotation_list hg19_annotation_quicktest.tab --input_bed example_data/example_peaks.bed --genome hg19 --additional_text_labels SampleName --additional_text example_data
+python OverlapAnnotationsWithBed.py --annotation_list hg19_annotation_quicktest.tab --input_bed example_data/example_peaks.bed --additional_text_labels SampleName --additional_text example_data
 ```
 
 In general, to use the tool, please supply the following:
@@ -22,10 +22,7 @@ In general, to use the tool, please supply the following:
 2. --input_bed 
     Bed file of peaks that you want to run . See "example_data/example_peaks.bed" for an example.
 
-3. --genome 
-    hg19 or mm9. This lets the program know how big the effective genome size should be.
-
-4. --additional_text_labels and --additional_text
+3. --additional_text_labels and --additional_text
     The program will output a file called "summary_overlaps.tab" at the end, which lists stats for each annotation on your sample. It's often the case that you will want to run many samples. To help identify them in the data, you can add a column to summary_overlaps.tab. The header of this column will be the value given to "--additional_text_labels", and the value will be the value given to "--additonal_text". This makes it easier to cat all the "summary_overlaps.tab" files at the end and know which sample is which.
     
 Output:

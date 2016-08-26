@@ -39,6 +39,11 @@ grpParam.add_argument('--debug', dest='bDebug',help='Adding this flag keeps the 
 
 args = parser.parse_args()
 
+# get Folder script is saved in
+# http://stackoverflow.com/questions/4934806/how-can-i-find-scripts-directory-with-python
+print("Checking script directory")
+dirOverlaps = os.path.dirname(os.path.realpath(__file__))
+print(dirOverlaps)
 
 #############################################################################
 # Functions
@@ -386,7 +391,7 @@ with open(args.tabSummaryOut+"_intermediate_tmp",'w') as fileSummary:
 #astrFilesToDelete.append(args.tabSummaryOut+"intermediate")
 
 
-astrCMD = ["Rscript", "/data/yosef/CD8_effector_diff/src/YosefCode/packages/OverlapAnnotationsWithBED/OverlapStats.R",
+astrCMD = ["Rscript", dirOverlaps + "/src/OverlapStats.R",
          "--ol_table",args.tabOut,
          "--ol_summary",args.tabSummaryOut+"_intermediate_tmp",
          "--shinyout",args.tabSummaryOut,
