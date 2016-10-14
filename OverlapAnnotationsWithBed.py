@@ -381,7 +381,13 @@ dfOverlapsResults.to_csv(path_or_buf=args.tabOut, sep='\t',index=False)
 if args.strRowStart == "":
     astrRowStart = []
 else:
-    astrRowStart = args.strRowStart
+    astrRowStart = []
+    # Unpack text values
+    aastrData = [x.split() for x in args.strRowStart]
+    for astrElement in aastrData:
+        for strElement in astrElement:
+            astrRowStart.append(strElement)
+    
 
 print "Outputting summary stats to:" +  args.tabSummaryOut+"_intermediate_tmp"
 with open(args.tabSummaryOut+"_intermediate_tmp",'w') as fileSummary:

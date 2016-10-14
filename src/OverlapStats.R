@@ -66,10 +66,12 @@ GetStatOnScore<- function(dfOL,dfSummary,strOLName,strStat="mean"){
 #Clean up rowmeta data, remove any quotation marks
 vstrRowMeta <- str_split(opt$rowmeta,pattern=" ")[[1]]
 vstrRowMeta <- gsub("\'","",vstrRowMeta)
+print(length(vstrRowMeta))
 
 print("Loading data...")
 dfOL <- read.table(opt$ol_table,sep="\t",header=TRUE)
 dfSummary <- read.table(opt$ol_summary,sep="\t",header=FALSE)
+print(head(dfSummary))
 names(dfSummary) <- c(vstrRowMeta,c("File","Type","Alias","Size","ValCol","Thresh","OLName","EffectiveGenome"))
 print(head(dfSummary))
 
@@ -80,10 +82,11 @@ print(head(dfSummary))
 dfSummary <- dfSummary[,(c(vstrRowMeta,"Type","Alias","Size","Thresh","OLName","EffectiveGenome"))]
 
 print("Calculating Enrichment...")
-print(colnames(dfSummary))
-print(colnames(dfOL))
+print(head(dfSummary))
+print(head(dfOL))
 matFoldEnrichment <- as.matrix(sapply(as.character(dfSummary[dfSummary$Type=="bed_overlap","OLName"]),GetFoldEnrichment,dfOL=dfOL,dfSummary=dfSummary,simplify="array"))
-
+print("Enrichment Results:")
+print(head(matFoldEnrichment))
 
 print("Calculating Statistics on score columns...")
 
@@ -94,9 +97,12 @@ matMeanStat <- as.matrix(apply(dfOL[,vScoreCols],2,mean,na.rm=TRUE))
 
 matAllStats <- rbind(matFoldEnrichment,matMeanStat)
 dfStats <- as.data.frame(matAllStats)
+print("Statistics:")
+print(head(dfStats))
 colnames(dfStats) <- "Statistic"
 dfStats$OLName <- row.names(dfStats)
 
 dfFinal <- merge(dfSummary,dfStats,by="OLName")
 
 write.table(dfFinal,sep="\t",opt$shinyout,row.names=F,col.names=T)
+print("Finished")
