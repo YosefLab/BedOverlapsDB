@@ -53,6 +53,27 @@ def check_create_dir( strDir ):
     if not os.path.exists( strDir ):
         os.makedirs( strDir )
     return strDir
+    
+# Looks for strFind in strFile. Main purpose is to find "\n\r" files which 
+# upset bedtools.
+def CheckForWindowsCRLF(strFile, strFind="\r\n", iLines=5):
+    bFoundIt = False    
+    iLineCount = 0
+    with open(strFile,'r') as fileRead:
+        for strLine in fileRead:
+            iLineCount+=1
+            
+            if strFind in strLine:
+                bFoundIt=True
+                break
+            if iLineCount >= iLines:
+                break
+            
+    
+    if(bFoundIt):
+        raise Exception('The file ' + strFile + ' is a Windows file, which will not' + 
+        ' work with bedtools. Please run "dos2unix" on the file, and try the OL' +
+        ' database again.')
 
 # Adds empty elements to a list if it's too short.
 def extend_list(aIn,iCorrectLen):
@@ -316,6 +337,11 @@ astrHeader = ["#chr","start","end"]
 aAnnotationSummary = []
 bedIn = args.bedIn
 
+## Check input file for issues:
+CheckForWindowsCRLF(strFile=bedIn, strFind="\r\n", iLines=5)
+
+
+
 ## Cut and sort the input file
 
 with open(dirTmp+os.sep+"CutBed.bed",'w') as fileBedCut:
@@ -336,6 +362,7 @@ dfOverlapsResults = pd.read_table(bedIn,names=["chr","start","end"],index_col=Fa
 print dfOverlapsResults.head()
 
 
+
 with open(args.tabAnnotList, 'rb') as fileAnnotList:
     for strLine in fileAnnotList:
         astrLine = strLine.split('\t')
@@ -347,7 +374,7 @@ with open(args.tabAnnotList, 'rb') as fileAnnotList:
             strAnnotFile,strType,iAnnotSize,strAlias,iScoreCol,dThresh,strFunc,iEffectiveGenome = ExtractAnnotVarsFromLine(astrLine)
             bedNextOutput = dirTmp + os.sep + "File"+str(iAnnotationsProcessed+1) + "_" + strType + ".bed" 
             print "Processing " + os.path.basename(strAnnotFile).replace(".bed","") + " ...."
-            
+            CheckForWindowsCRLF(strFile=strAnnotFile, strFind="\r\n", iLines=5)
             # Run appropriate bedtools command to merge on output           
             if strType == "bed_score":
                 astrHeader = [strAlias+"_"+strFunc+"score"]
