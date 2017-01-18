@@ -105,12 +105,7 @@ tbOLStats <- tbOLStats %>% mutate(Enrichment_Peaks =(TotalOverlap_Peaks/UserSet_
                                                              k=UserSet_BP)) 
 
 
-phyper(q=23851,      # black balls picked
-       m=7777662,        # black balls in urn
-       n=2897310462-7777662, # white balls in urn
-       k=1367415)
-
-write.table(dfFinal,opt$shinyout,sep="\t",row.names=F)
+write.table(tbOLStats,opt$shinyout,sep="\t",row.names=F)
 
 
 # vstrOLAnnots <- as.character(unlist(dfSummary[dfSummary$Type=="bed_overlap","OLName"]))
