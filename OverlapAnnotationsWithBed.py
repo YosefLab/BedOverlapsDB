@@ -106,43 +106,49 @@ def ExtractAnnotVarsFromLine(astrLine):
         iSize = CheckNumber(astrLine[2])
     else:
         iSize = -1.0
-    # 3= Alias
-    if len(astrLine)>3:
-        strAlias = astrLine[3].strip()
+    # 3= NumPeaks        
+    if len(astrLine)>3: 
+        iAnnotPeaks = CheckNumber(astrLine[3])
+    else:
+        iAnnotPeaks = -1.0
+    # 4= Alias
+    if len(astrLine)>4:
+        strAlias = astrLine[4].strip()
     else:
         strAlias = strFile.split(os.sep)[-1].replace(".bed","")
 
-    # 4= ScoreCol
-    if len(astrLine)>4:
-        iScoreCol = CheckNumber(astrLine[4])
+    # 5= ScoreCol
+    if len(astrLine)>5:
+        iScoreCol = CheckNumber(astrLine[5])
     else:
         iScoreCol = -1
         
-    #5= function
-    if len(astrLine)>5:
-        strFunc = astrLine[5]
+    #6= function
+    if len(astrLine)>6:
+        strFunc = astrLine[6]
     else:
         strFunc = ""
     
-    # 6= Thresh
-    if len(astrLine)>6:
-        dThresh = CheckNumber(astrLine[6])
+    # 7= Thresh
+    if len(astrLine)>7:
+        dThresh = CheckNumber(astrLine[7])
     else:
         dThresh = -1.0
         
-    # 7= Effective Genome
-    if len(astrLine)>7:
-        iEffectiveGenome = CheckNumber(astrLine[7])
+    # 8= Effective Genome
+    if len(astrLine)>8:
+        iEffectiveGenome = CheckNumber(astrLine[8])
     else:
         iEffectiveGenome = -1.0
         
     # Replacing -'s with .'s because R does not like minus signs.
     strAlias = strAlias.replace("-",".")
         
-    return strFile,strType,int(iSize),strAlias,int(iScoreCol),dThresh,strFunc,iEffectiveGenome
+    return strFile,strType,int(iSize),iAnnotPeaks,strAlias,int(iScoreCol),dThresh,strFunc,iEffectiveGenome
     
 def GetAnnotationSize(bedAnnotFile,bedTmp,cmdBedtools):
     iSize = 0
+    iPeaks = 0
     
     with open(bedTmp, 'w') as fileTmp:
         
@@ -158,10 +164,11 @@ def GetAnnotationSize(bedAnnotFile,bedTmp,cmdBedtools):
     
     with open(bedTmp, 'rb') as fileTmp:
         for strLine in fileTmp:
+            iPeaks+=1
             astrLine = strLine.split('\t')
             if strLine.strip() != "" and strLine[0]!="#":
                 iSize+= (int(astrLine[2]) - int(astrLine[1]))
-    return iSize
+    return iSize,iPeaks
     
     
             
@@ -265,7 +272,7 @@ def ProcessAnnotation_ScoreBed(bedIn,bedAnnotFile,bedOut,iValCol,strFunction,iSi
 
     return dfResult
 
-def ProcessAnnotation_Overlap(bedIn,bedAnnotFile,bedOut,iSizeAnnot,cmdBedtools,astrHeader,dirTmp):
+def ProcessAnnotation_Overlap(bedIn,bedAnnotFile,bedOut,iSizeAnnot,iPeaksAnnot,cmdBedtools,astrHeader,dirTmp):
     """
     Performs left-outer-join of bedAnnotFile on bedIn, sums bp_overlap for each row of bedIn 
     
@@ -315,11 +322,11 @@ def ProcessAnnotation_Overlap(bedIn,bedAnnotFile,bedOut,iSizeAnnot,cmdBedtools,a
     dfResult = pd.read_table(bedOut,header=None,names=["chr","start","end"]+astrHeader,index_col=False)
     dfResult.head()        
         
-    if iSizeAnnot == -1:
+    if iSizeAnnot == -1 or iPeaksAnnot == -1:
         print "Calculating Annotation Size..."
-        iSizeAnnot = GetAnnotationSize(bedAnnotFile,dirTmp + os.sep + astrHeader[0] +"_temp.bed",cmdBedtools)
+        iSizeAnnot,iPeaksAnnot = GetAnnotationSize(bedAnnotFile,dirTmp + os.sep + astrHeader[0] +"_temp.bed",cmdBedtools)
     # include awk script to look a
-    return iSizeAnnot,dfResult
+    return iSizeAnnot,dfResult,iPeaksAnnot
 
 #############################################################################
 
@@ -357,6 +364,7 @@ bedIn = dirTmp+os.sep+"CutBed.bed"
 
 
 dfOverlapsResults = pd.read_table(bedIn,names=["chr","start","end"],index_col=False)
+dfOverlapsResults = dfOverlapsResults[dfOverlapsResults.chr.str.startswith("#")==False]
 #dfOverlapsResults.columns = ["test1","test2","test3"]
 
 print dfOverlapsResults.head()
@@ -371,7 +379,7 @@ with open(args.tabAnnotList, 'rb') as fileAnnotList:
             
             # Extract Information from line, prep output file
             astrLine = extend_list(astrLine,7)
-            strAnnotFile,strType,iAnnotSize,strAlias,iScoreCol,dThresh,strFunc,iEffectiveGenome = ExtractAnnotVarsFromLine(astrLine)
+            strAnnotFile,strType,iAnnotSize,iAnnotPeaks,strAlias,iScoreCol,dThresh,strFunc,iEffectiveGenome = ExtractAnnotVarsFromLine(astrLine)
             bedNextOutput = dirTmp + os.sep + "File"+str(iAnnotationsProcessed+1) + "_" + strType + ".bed" 
             print "Processing " + os.path.basename(strAnnotFile).replace(".bed","") + " ...."
             CheckForWindowsCRLF(strFile=strAnnotFile, strFind="\r\n", iLines=5)
@@ -381,21 +389,23 @@ with open(args.tabAnnotList, 'rb') as fileAnnotList:
                 dfAnnotResults =ProcessAnnotation_ScoreBed(bedIn,strAnnotFile,bedNextOutput,iScoreCol,strFunc,iAnnotSize,"bedtools",astrHeader,dirTmp)
             if strType == "bed_overlap":
                 astrHeader = [strAlias+"_OverlapBP"]
-                iAnnotSize,dfAnnotResults =ProcessAnnotation_Overlap(bedIn,strAnnotFile,bedNextOutput,iAnnotSize,"bedtools",astrHeader,dirTmp)
+                iAnnotSize,dfAnnotResults,iAnnotPeaks =ProcessAnnotation_Overlap(bedIn,strAnnotFile,bedNextOutput,iAnnotSize,iAnnotPeaks,"bedtools",astrHeader,dirTmp)
             if strType == "bed_closest":
                 astrHeader = ["Closest_"+strAlias,"DistToClosest_"+strAlias]
                 dfAnnotResults =ProcessAnnotation_ClosestFeature(bedIn,strAnnotFile,bedNextOutput,iAnnotSize,iScoreCol,"bedtools",astrHeader)
             
            # print dfOverlapsResults.head()
             print dfAnnotResults.head()
+            print dfOverlapsResults.head()
             dfOverlapsResults = pd.merge(dfOverlapsResults, dfAnnotResults, how='left', left_on=['chr','start','end'],right_on=['chr','start','end'])
-            dfOverlapsResults.head()
+            dfOverlapsResults = dfOverlapsResults[dfOverlapsResults.chr.str.startswith("#")==False]
+            print dfOverlapsResults.head()
             astrFilesToDelete.append(bedNextOutput)
             
-            # Delete file if you are not in debug mode
+
             print "Effective Genome Size"
             print str(iEffectiveGenome)
-            aAnnotationSummary.append([strAnnotFile,strType,strAlias,iAnnotSize,iScoreCol,dThresh,astrHeader[-1],iEffectiveGenome])
+            aAnnotationSummary.append([strAnnotFile,strType,strAlias,iAnnotSize,iAnnotPeaks,iScoreCol,dThresh,astrHeader[-1],iEffectiveGenome])
             iAnnotationsProcessed+=1
             
 #AddHeaderToFile(bedNextOutput,args.tabOut,astrHeader)
@@ -434,14 +444,17 @@ sp.call(astrCMD)
 
 #astrFilesToDelete.append(args.tabSummaryOut+"_intermediate_tmp")
 # Cleanup
-for strFile in astrFilesToDelete:
-    os.remove(strFile)
 
-sys.stderr.write("Cleaning up... \n")
-for strFile in glob.glob(dirTmp + "/*"):
-    sys.stderr.write("Deleting " + strFile + "\n")
-    os.remove(strFile)
+if args.bDebug==False:
     
-os.rmdir(dirTmp)
+    for strFile in astrFilesToDelete:
+        os.remove(strFile)
+    
+    sys.stderr.write("Cleaning up... \n")
+    for strFile in glob.glob(dirTmp + "/*"):
+        sys.stderr.write("Deleting " + strFile + "\n")
+        os.remove(strFile)
+        
+    os.rmdir(dirTmp)
 
     

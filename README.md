@@ -1,5 +1,8 @@
 # Overlaps DB
 
+** Note: 1/17/2017 - I made some updates to this code to produce statistics a colleague needed for a revision. It worked fine on her data, but I would like to test it a bit more to make sure everything is solid. Please give me a heads up if you plan on using this. I'd like to take a few hours to clean the documentation and test the code. - Jim  **
+
+
 This will be replaced by a more detailed instruction manual in the future. For now, if you wish to use this program please download/clone the repository and run this command to determine if it works on your system:
 
 ```
