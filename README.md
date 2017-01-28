@@ -80,7 +80,6 @@ chr9	10000	10010
 
 
 ### Annotation List
-Bed_Operation	Annotation_SizeInBP	Annotation_NumPeaks	Alias	ScoreColumn	Function	Thresh	EffectiveGenomeSize
 
 This is a tab-delimited file where every row provides information on one of your annotations. The nine columns needed are:
 
