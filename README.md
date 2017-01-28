@@ -17,7 +17,7 @@ Please note that this documentation is a work in progress.
 [Input Files](#input_files)    
 [Output Files](#output_files)    
 
-##### Common Tasks   
+#### Common Tasks   
 [bed_overlap: Find Overlap and Enrichment](#bed_overlap)  
 [bed_closest: Find Nearest Features](#bed_closest)  
 [bed_score: Produce a Summary Statistic on Score Column ](#bed_score)     
