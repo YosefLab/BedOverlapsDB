@@ -14,7 +14,7 @@ Please note that this documentation is a work in progress.
 
 #### Overview
 [Introduction](#intro)    
-[Input Files](#input files)    
+[Input Files](#input_files)    
 [Output Files](#output_files)    
 
 ##### Common Tasks   
@@ -143,8 +143,9 @@ The hypergeometric tests are calculated in the R script (src/OverlapStats.R) as 
 
    
 
+## Common Tasks
 
-Note: I need to check over these and make sure they are 100% correct.
+**Note: I need to check over these and make sure they are 100% correct.** For now, I have put short descriptions of how the program calculates these.
 
 <a name="bed_overlap"></a>
 
