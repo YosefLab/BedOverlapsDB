@@ -369,7 +369,26 @@ dfOverlapsResults = dfOverlapsResults[dfOverlapsResults.chr.str.startswith("#")=
 
 print dfOverlapsResults.head()
 
+# Check to make sure annotation list has nine columns
 
+with open(args.tabAnnotList, 'rb') as fileAnnotList:
+    for strLine in fileAnnotList:
+        astrLine = strLine.split('\t')
+
+if len(astrLine)!=9:
+    raise Exception('Your list of annotations appears to have ' + str(len(astrLine)) +  
+    ' columns. The expected number is nine. Please check and confirm that ' +
+    ' your list of annotations has these columns \n' +
+    ' * #File - This is the path to the bed file for annotation.\n'+
+    ' * Type - Operation to carry out. For example: "bed_overlap"\n'+
+    ' * Size - This is the size of the annotation in bp. You can enter "-1" if you want the program to calculate it.\n'+
+    ' * NumPeaks  - This is the number of peaks in the annotation. You can set this to "-1" to have the program calculate it.\n'+
+    ' * Alias - An alternative, short name for the bed file\n'+
+    ' * ScoreCol - This is used when the annotation file has a score, like say evolutionary conservation. You can leave it blank if you are not doing "bed_score".\n'+
+    ' * Bedtools function - Function to apply to score column. You can leave it blank if you are not doing "bed_score".\n'+
+    ' * Threshold - Threshold to apply to score column. You can leave it blank if you are not doing "bed_score".\n'+
+    ' * EffectiveGenomeSize - This is the effective genome size to use for the annotation.')
+    
 
 with open(args.tabAnnotList, 'rb') as fileAnnotList:
     for strLine in fileAnnotList:

@@ -1,4 +1,4 @@
-#file	type	annot_size	alias	ValueColumn	Function	Thresh
-/home/eecs/jimkaminski/sandbox/overlaps_test/example_data/overlap.bed	bed_overlap	-1	OverlapTest			
-/home/eecs/jimkaminski/sandbox/overlaps_test/example_data/score.bed	bed_score	-1	ScoreTest	4	mean	
-/home/eecs/jimkaminski/sandbox/overlaps_test/example_data/closest_feature.bed	bed_closest	-1	ClosestFeatureTest	4		
+#File	Bed_Operation	Annotation_SizeInBP	Annotation_NumPeaks	Alias	ScoreColumn	Function	Thresh	EffectiveGenomeSize
+example_data/overlap.bed	bed_overlap	-1	-1	OverlapTest				2897310462
+example_data/score.bed	bed_score	-1	-1	ScoreTest	4	mean		2897310462
+example_data/closest_feature.bed	bed_closest	-1	-1	ClosestFeatureTest	4			2897310462

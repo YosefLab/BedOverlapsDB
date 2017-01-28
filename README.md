@@ -1,13 +1,71 @@
+BedOverlapsDB
+===========
+
+This pipeline take a set of genomic intervals and measures how enriched they are in a set of genomic annotations. An example use case would be taking a set of ATAC-Seq peaks, and measuring how enriched they are in a set of regulatory annotations in the mouse genome.
+
+Jim created and maintains this pipeline. 
+Please note that this documentation is a work in progress.
+
+---
+
+#### Table of Contents
+[Important Notes](#important_notes)    
+[Quickstart](#quickstart)    
+
+#### Overview
+[Introduction](#intro)
+[Input Files](#input files)
+[Output Files](#output_files)
+
+##### Common Tasks   
+[bed_overlap: Find Overlap and Enrichment](#bed_overlap)  
+[bed_closest: Find Nearest Features](#bed_closest)  
+[bed_score: Produce a Summary Statistic on Score Column ](#bed_score)  
+
+---
+
+<a name="important_notes"></a>
+
+## Important Notes
+
+The pipeline currently relies on Jim's directory of R packages to load some things we don't have installed lab-wide yet. That's fine as a temporary measure, but we should install the "tidyverse" on s121-s124 when there is time.
+
+<a name="quickstart"></a>
+
+## Quickstart
+
+To make sure you can use this repository, please run the following test from inside the BedOverlapsDB folder:
+
+```
+python OverlapAnnotationsWithBed.py --annotation_list example_data/example_annotations.tab  \
+--input_bed example_data/example_peaks.bed --additional_text_labels SampleName \
+ --additional_text test_sample --out_overlaps my_test_overlap_matrix.tab --out_summary my_test_stat_summary.tab
+```
+
+That will run the example_peaks.bed against a set of small sample annotations included with the package, and carry out the three basic operations performed by the package (measure overlap, find nearest feature, calculate a stat based on a summary score). It's a good first test to make sure that you have access to all the packages and programs you need to run BedOverlapsDB.
+
+<a name="Introduction"></a>
+
+## Introduction
+
+Many of us work with data from ATAC-Seq, DNase-Seq and other experimental techniques that generate reads from particular sections of the genome that we expect to have some functional purpose. ATAC-Seq, for example, generates reads from open chromatin regions, and these regions typically contain things like enhancers. Some of the questions you might have a researcher are:
+
+* Are these regions enriched for widely used lists of regulatory regions, (say ORegAnno)
+* Are these regions close to transcription start sites (TSS's)? Are they near any genes we're interested in?
+* Do these regions have a high average score for some measure of conservation?
+
+The BedOverlapsDB is a tool answering these questions. It answers the first questions by measuring enrichment for a set of features. It answers the second by returning the closest interval in a set of features. It answers the last question by returning a summary statistic on some score.
+
+Really, it consists of two small scripts that rely on the excellent [bedtools](http://bedtools.readthedocs.io/en/latest/) package to do most of the work.
+
+
+
+
 # Overlaps DB
 
-**Note: 1/17/2017 - I made some updates to this code to produce statistics a colleague needed for a revision. It worked fine on her data, but I would like to test it a bit more to make sure everything is solid. Please give me a heads up if you plan on using this. I'd like to take a few hours to clean the documentation and test the code. - Jim**
 
 
-This will be replaced by a more detailed instruction manual in the future. For now, if you wish to use this program please download/clone the repository and run this command to determine if it works on your system:
 
-```
-python OverlapAnnotationsWithBed.py --annotation_list hg19_annotation_quicktest.tab --input_bed example_data/example_peaks.bed --additional_text_labels SampleName --additional_text example_data
-```
 
 In general, to use the tool, please supply the following:
 
