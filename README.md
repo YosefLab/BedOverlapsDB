@@ -1,7 +1,7 @@
 BedOverlapsDB
 ===========
 
-This pipeline take a set of genomic intervals and measures how enriched they are in a set of genomic annotations. An example use case would be taking a set of ATAC-Seq peaks, and measuring how enriched they are in a set of regulatory annotations in the mouse genome.
+This pipeline takes a set of genomic itervals and measures their enrichment in a set of genomic annotations. For example, one could use the pipeline to determine if a set of ATAC-Seq peaks are enriched for regulatory features in the mouse genome. "Enriched" means that these peaks have a higher prevalence of some regulatory feature than is found in the organism's full genome.
 
 Jim created and maintains this pipeline. 
 Please note that this documentation is a work in progress.
@@ -28,7 +28,8 @@ Please note that this documentation is a work in progress.
 
 ## Important Notes
 
-The pipeline currently relies on Jim's directory of R packages to load some things we don't have installed lab-wide yet. That's fine as a temporary measure, but we should install the "tidyverse" on s121-s124 when there is time.
+* The pipeline currently relies on Jim's directory of R packages to load some things we don't have installed lab-wide yet. That's fine as a temporary measure, but we should install the "tidyverse" on s121-s124 when there is time.
+* Typically, the pipeline merges overlapping peaks within a set of peaks to avoid double-counting. I will check and confirm how this is handled for the input set, and an annotation set.
 
 <a name="quickstart"></a>
 
@@ -42,21 +43,21 @@ python OverlapAnnotationsWithBed.py --annotation_list example_data/example_annot
  --additional_text test_sample --out_overlaps my_test_overlap_matrix.tab --out_summary my_test_stat_summary.tab
 ```
 
-That will run the example_peaks.bed against a set of small sample annotations included with the package, and carry out the three basic operations performed by the package (measure overlap, find nearest feature, calculate a stat based on a summary score). It's a good first test to make sure that you have access to all the packages and programs you need to run BedOverlapsDB.
+That will check the example_peaks.bed against a set of small sample annotations included with the package, and carry out the three basic operations performed by the package (measure overlap, find nearest feature, calculate a stat based on a numeric value in an annotation). It's a good first test to make sure that you have access to all the packages and programs you need to run BedOverlapsDB.
 
 <a name="intro"></a>
 
 ## Introduction
 
-Many of us work with data from ATAC-Seq, DNase-Seq and other experimental techniques that generate reads from particular sections of the genome that we expect to have some functional purpose. ATAC-Seq, for example, generates reads from open chromatin regions, and these regions typically contain things like enhancers. Some of the questions you might have a researcher are:
+Many of us work with data from ATAC-Seq, DNase-Seq and other experimental techniques that identify particular regions of the genome that we expect to have some functional purpose. ATAC-Seq, for example, generates reads from open chromatin regions, and these regions typically contain things like enhancers. Some of the questions you might have as a researcher are:
 
-* Are these regions enriched for widely used lists of regulatory regions, (say ORegAnno)?
+* Are these regions enriched for widely used lists of regulatory regions?
 * Are these regions close to transcription start sites (TSS's)? Are they near any genes we're interested in?
 * Do these regions have a high average score for some measure of conservation?
 
-The BedOverlapsDB is a tool for answering these questions. It answers the first questions by measuring enrichment for a set of features. It answers the second by returning the closest interval in a set of features. It answers the last question by returning a summary statistic on some score.
+The BedOverlapsDB is a tool for answering these questions. It answers the first question by measuring enrichment for a set of features. It answers the second by returning closest feature (and distance to it) from a set of features. It answers the last question by returning a summary statistic (mean, max, etc.) on some score for annotation regions that overlap.
 
-It consists of two small scripts that rely on the excellent [bedtools](http://bedtools.readthedocs.io/en/latest/) package to do most of the work. I strongly recommend learning how to use bedtools if you are working with ChIP,ATAC,orDNase Seq data.
+It consists of two small scripts that rely on the excellent [bedtools](http://bedtools.readthedocs.io/en/latest/) package to do most of the work. I strongly recommend learning how to use bedtools if you are working with ChIP, ATAC, or DNase-Seq data.
 
 <a name="input_files"></a>
 
@@ -65,8 +66,8 @@ It consists of two small scripts that rely on the excellent [bedtools](http://be
 To run the program, you will need to supply:
 
 1) --input_bed, a bed file of genomic regions of interest (say, your ATAC-Seq peaks)   
-2) --annotation_list, a tab-delimited file with nine fields of information on your annotation files.
-3) A set of annotation files. Each file needs a row of information in --annotation_list
+2) --annotation_list, a tab-delimited file with nine fields of information for each annotation file.   
+3) A set of annotation files,  each file needs a row of information in --annotation_list
 
 ### Input Bed
 
@@ -83,7 +84,9 @@ chr9	10000	10010
 
 This is a tab-delimited file where every row provides information on one of your annotations. The nine columns needed are:
 
-* File - Path to the annotation's bed file. Note: I put a pound sign "#" there just so Python knows to treat the first line as a comment. The program does not actually read these column names (it relies on order to tell what's what), but I find the names are helpful for us.   
+[Note: You do not need a header in the --annotation_list file, but I strongly recommend it. Please put a "#" at the start to comment it out, or the program will treat it as data.]  
+
+* File - Path to the annotation's bed file. 
 * Type - Operation to carry out: bed_overlap, bed_closest, or bed_score    
 * Annotation_SizeInBP - This is the size of the annotation in bp. You can enter "-1" if you want BedOverlaps_DB to calculate it. The only advantage to providing it is that it can save you a small amount of time if the file is unusually large, or if you want to change the size for some other reason.
 * Annotation_NumPeaks  - This is the number of peaks in the annotation. You can set this to "-1" to have the program calculate it.   
@@ -109,11 +112,15 @@ If you ran the example, you should get an output matrix that looks something lik
 | chr2 | 1000  | 1100  | 0                     | 0                   | Feature_2                  | 7901                             |
 | chr9 | 10000 | 10010 | 0                     | 0                   | NoFeature                  | 0                                |
 
-The OverlapTest_OverlapBP shows the number of bp overlapping the three regions. ScoreTest_meanscore shows the mean value for annotation peaks overlapping the three regions. Closest_ClosestFeatureTest reports the nearest feature for the first two peaks, and "NoFeature" for the last region, since the annotation had anothing on Chr9. The remaining column reports the distance in bp to the feature.
+* chr,start,end - This is the locus from the original input_bed.   
+* OverlapTest_OverlapBP - The number of bp that overlap the input locus from the OverlapTest annotation.   
+* ScoreTest_meanscore - The mean value of the value in ScoreTest for the annotation peaks overlapping the input locus.     
+* Closest_ClosestFeatureTest - The nearest feature for the first loci, and "NoFeature" for the last region, since the annotation had nothing on Chr9.   
+* DistToClosest_ClosestFeatureTest - Thus reports the distance in bp from the input locus to the feature.   
 
 **--out_summary** This reports summary stats and hypothesis tests for each of the bed_overlap operations. It reports the following:
 
-* Annotation - Name of the annotation.   
+* Annotation - Name of the annotation   
 * Annotation_BP - Size of the annotation in BP   
 * Annotation_Peaks - Number of peaks in the annotation   
 * EffectiveGenomeSize_BP - EffectiveGenomeSize_BP used for the Annotation's enrichment test   
