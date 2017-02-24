@@ -1,16 +1,28 @@
 ###############################################################
 # Jim Kaminski
-# Updated on 1/13/2017
+# Updated on 2/23/2017
+###############################################################
+
+###############################################################
+# Load Packages, Parse Command Line Args
 ###############################################################
 
 rm(list=ls())
-.libPaths("/home/eecs/jimkaminski/R_pkgs")
+
+# I want to drop this reference to my library because it is 
+# very poor form. However, this may wind up killing people's
+# projects. Long term solution is to make sure these packages
+# are available on cluster.
+
+#.libPaths("/home/eecs/jimkaminski/R_pkgs") 
+
+
 print(.libPaths())
 
 library(tidyverse)
 library(optparse)
 library(ggplot2)
-library(reshape2)
+#library(reshape2)
 library(stringr)
 
 option_list <- list(
@@ -20,34 +32,17 @@ option_list <- list(
               help="Summary Information for each annotation."),
   make_option("--shinyout", default="summary_overlaps.tab", type="character",
               help="Output file for Shiny."),
-  make_option("--rowmeta", default="ENCODEmarks", type="character",
+  make_option("--rowmeta", default="empty", type="character",
               help="Labels of columns in row metadata") 
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
-##############################################################
-GetFoldEnrichment<- function(dfOL,dfSummary,strOLName){
-  print(strOLName)
-  iOLPeaksBP <- sum(dfOL[,strOLName])
-  iAnnotSizeBP <- dfSummary[dfSummary$OLName==strOLName,"Size"]
-  iGenomeSizeBP <- dfSummary[dfSummary$OLName==strOLName,"EffectiveGenome"]
-  vPeakSize <- dfOL$end - dfOL$start
-  iPeakSizeBP <- sum(vPeakSize)
-  
-  dFoldEnrichment <- (iOLPeaksBP/(iPeakSizeBP*1.0)) / (iAnnotSizeBP/(iGenomeSizeBP*1.0))
-  return(dFoldEnrichment)
-}
 
-GetStatOnScore<- function(dfOL,dfSummary,strOLName,strStat="mean"){
-  iOLPeaksBP <- sum(dfOL[,strOLName])
-  iAnnotSizeBP <- dfSummary[dfSummary$OLName==strOLName,"Size"]
-  iGenomeSizeBP <- dfSummary[dfSummary$OLName==strOLName,"EffectiveGenome"]
-  vPeakSize <- dfOL$end - dfOL$start
-  iPeakSizeBP <- sum(vPeakSize)
-  
-  dFoldEnrichment <- (iOLPeaksBP/(iPeakSizeBP*1.0)) / (iAnnotSizeBP/(iGenomeSizeBP*1.0))
-  return(dFoldEnrichment)
-}
+# Sample data that can be used for debugging.
+# opt$ol_table <- "/home/eecs/jimkaminski/test_doit/out/peaks/chip/chip__MouseChIP_IP__0.05/chip__MouseChIP_IP__0.05_overlaps.tab"
+# opt$ol_summary <- "/home/eecs/jimkaminski/test_doit/out/peaks/chip/chip__MouseChIP_IP__0.05/chip__MouseChIP_IP__0.05_stats.tab_intermediate_tmp" 
+# opt$shinyout <- "/home/eecs/jimkaminski/test_doit/out/peaks/chip/chip__MouseChIP_IP__0.05/chip__MouseChIP_IP__0.05_stats.tab" 
+# opt$rowmeta  <- "Sample QValue Lambda Duplication Broad"
 
 ###################################################
 # Clean Up Data
@@ -57,6 +52,8 @@ GetStatOnScore<- function(dfOL,dfSummary,strOLName,strStat="mean"){
 vstrRowMeta <- str_split(opt$rowmeta,pattern=" ")[[1]]
 vstrRowMeta <- gsub("\'","",vstrRowMeta)
 
+
+
 print("Loading data...")
 dfOL <- read.table(opt$ol_table,sep="\t",header=TRUE)
 dfSummary <- read.table(opt$ol_summary,sep="\t",header=FALSE)
@@ -64,30 +61,32 @@ names(dfSummary) <- c(vstrRowMeta,c("File","Type","Alias","Annotation_BP","Annot
 dfSummary <- dfSummary[,(c(vstrRowMeta,"Type","Alias","Annotation_BP","Annotation_Peaks","OLName","EffectiveGenome"))]
 
 ##############################################
-# Calculate Statistics
+# Calculate Overlap Statistics
 ##############################################
 
 print("Calculating Enrichment...")
 iUserSet_BP <- sum(dfOL$end - dfOL$start)
 iUserSet_Peaks <- nrow(dfOL)
 
-# Create a dataframe of Statistics where the dfSummary$Type=="bed_overlap"
+
 vstrOLAnnots <- unlist(as.character(dfSummary$OLName[dfSummary$Type=="bed_overlap"])) 
 
+
+# For each annotation, sum up the overlap in terms of BP and Peaks.
+# tbOLStats has a row for each annotation: [Annotation,TotalOverlap_BP,TotalOverlap_Peaks,UserSet_BP,UserSet_Peaks] 
 tbOLStats <- dfOL %>% select(one_of(vstrOLAnnots)) %>% 
   gather(Annotation,Overlap) %>% 
-  group_by(Annotation) %>%
+  group_by(Annotation) %>%   
   summarize(TotalOverlap_BP = sum(Overlap),
             TotalOverlap_Peaks = sum(Overlap>0)) %>%
   mutate(UserSet_BP =iUserSet_BP,UserSet_Peaks = iUserSet_Peaks  )
   
 
-# Merge on effective genome size
+# Take tbOLStats, and merge on Effective_GenomeSize_BP, and TotalOverlap_BP
 tbOLStats <- dfSummary %>% select(Annotation=OLName,Annotation_BP,Annotation_Peaks,EffectiveGenomeSize_BP=EffectiveGenome) %>%
   right_join(tbOLStats,by=("Annotation")) %>% mutate(PeaksInWorld = round(EffectiveGenomeSize_BP/(Annotation_BP/Annotation_Peaks)))
 
-# Calculate Statistics
-
+# Calculate All Statistics of Interest
 tbOLStats <- tbOLStats %>% mutate(Enrichment_Peaks =(TotalOverlap_Peaks/UserSet_Peaks)/(Annotation_Peaks/PeaksInWorld) ,
                                   Enrichment_BP =  (TotalOverlap_BP/UserSet_BP)/(Annotation_BP/EffectiveGenomeSize_BP)) %>%
   mutate(Hypergeometric_Peaks_PVal_OneSided = 1-phyper(q=TotalOverlap_Peaks,      # black balls picked
@@ -99,46 +98,11 @@ tbOLStats <- tbOLStats %>% mutate(Enrichment_Peaks =(TotalOverlap_Peaks/UserSet_
                                                              m=Annotation_BP,        # black balls in urn
                                                              n=EffectiveGenomeSize_BP-Annotation_BP, # white balls in urn
                                                              k=UserSet_BP)) 
+# Finally, append the user-supplied metadata to the left side.
 
+dfMetadata <- dfSummary[rep(1,times=nrow(tbOLStats)),vstrRowMeta]
+tbOLStats <- cbind(dfMetadata,tbOLStats)
+
+# Print out the results
 
 write.table(tbOLStats,opt$shinyout,sep="\t",row.names=F)
-
-
-# vstrOLAnnots <- as.character(unlist(dfSummary[dfSummary$Type=="bed_overlap","OLName"]))
-# TotalPeaksInUniverse <- nrow(dfOL)
-# TotalBPInUniverse <- sum(dfOL$end - dfOL$start)
-# tbOL <- as_tibble(dfOL) %>% select(one_of(c(vstrOLAnnots)))
-# tbStats <- tbOL %>% gather(key=Annotation,OverlapInBP,everything()) %>%
-#   group_by(Annotation) %>%
-#   summarize(
-#     Peaks_That_OL_Annotation = sum(OverlapInBP>0),
-#     BP_That_OL_Annotation = sum(OverlapInBP),
-#     Total_Peaks_In_Universe = TotalPeaksInUniverse,
-#     Total_BP_In_Universe = TotalBPInUniverse
-#   ) %>%
-#   left_join(dfSummary,c("Annotation" = "OLName")) %>%
-#   mutate(FoldEnrichment_BP = (BP_That_OL_Annotation/(Total_BP_In_Universe*1.0)) / (Size/(EffectiveGenome*1.0)))
-#          
-#          
-# write.table(tbStats,"SampleResults.tab",sep="\t",row.names = FALSE)
-# 
-# # Old Way
-# #matFoldEnrichment <- as.matrix(sapply(as.character(dfSummary[dfSummary$Type=="bed_overlap","OLName"]),GetFoldEnrichment,dfOL=dfOL,dfSummary=dfSummary,simplify="array"))
-# 
-# 
-# 
-# print("Calculating Statistics on score columns...")
-# 
-# vScoreCols <- as.character(dfSummary[dfSummary$Type=="bed_score","OLName"])
-# dfOL[,vScoreCols] <- apply(dfOL[,vScoreCols],2,as.numeric)
-# matMeanStat <- as.matrix(apply(dfOL[,vScoreCols],2,mean,na.rm=TRUE))
-#                
-# 
-# matAllStats <- rbind(matFoldEnrichment,matMeanStat)
-# dfStats <- as.data.frame(matAllStats)
-# colnames(dfStats) <- "Statistic"
-# dfStats$OLName <- row.names(dfStats)
-# 
-# dfFinal <- merge(dfSummary,dfStats,by="OLName")
-# 
-# write.table(dfFinal,sep="\t",opt$shinyout,row.names=F,col.names=T)
