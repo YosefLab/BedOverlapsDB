@@ -14,7 +14,7 @@ rm(list=ls())
 # projects. Long term solution is to make sure these packages
 # are available on cluster.
 
-#.libPaths("/home/eecs/jimkaminski/R_pkgs") 
+.libPaths("/home/eecs/jimkaminski/R_pkgs") 
 
 
 print(.libPaths())
