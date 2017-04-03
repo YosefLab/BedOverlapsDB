@@ -4,7 +4,19 @@
 # Yosef Lab
 ##############################################################################
 """
-CUT THE INPUT FILE, AND ALL BED_OVERLAPS FILES TO BE
+BedOverlaps DB
+
+This pipeline takes a set of genomic itervals and measures their enrichment in 
+a set of genomic annotations. For example, one could use the pipeline to 
+determine if a set of ATAC-Seq peaks are enriched for regulatory features in 
+the mouse genome. "Enriched" means that these peaks have a higher prevalence of 
+some regulatory feature than is found in the organism's full genome.
+
+Sample Call
+
+    python OverlapAnnotationsWithBed.py --annotation_list example_data/example_annotations.tab  \
+    --input_bed example_data/example_peaks.bed --additional_text_labels SampleName \
+     --additional_text test_sample --out_overlaps my_test_overlap_matrix.tab --out_summary my_test_stat_summary.tab
 
 
 Input
@@ -22,7 +34,7 @@ import sys
 import os
 import subprocess as sp
 import pandas as pd
-import numpy as np
+
 
 parser = argparse.ArgumentParser(description='')
 grpParam = parser.add_argument_group('')
@@ -34,29 +46,31 @@ grpParam.add_argument('--input_bed', type=str, dest='bedIn',help='Enter the path
 grpParam.add_argument('--out_overlaps', type=str, dest='tabOut',help='Enter the path to output the final file.',default= "overlaps.tab")
 grpParam.add_argument('--out_summary', type=str, dest='tabSummaryOut',help='Enter the path to output the summary file.',default= "summary_overlaps.tab")
 grpParam.add_argument('--additional_text', type=str, dest='strRowStart',help='This is additional text that you can prepend to every row of the summary data.',default= "",nargs='+')
-grpParam.add_argument('--additional_text_labels', type=str, dest='astrRowLabels',help='This is additional text that you can prepend to every row of the summary data.',default= "",nargs='+')
+grpParam.add_argument('--additional_text_labels', type=str, dest='astrRowLabels',help='These are the variable names for the values specified in additional_text.',default= "",nargs='+')
 grpParam.add_argument('--debug', dest='bDebug',help='Adding this flag keeps the temporary files this program makes.', const=True, default = False,action='store_const')
 
 args = parser.parse_args()
 
-# get Folder script is saved in
-# http://stackoverflow.com/questions/4934806/how-can-i-find-scripts-directory-with-python
 print("Checking script directory")
 dirOverlaps = os.path.dirname(os.path.realpath(__file__))
 print(dirOverlaps)
 
-#############################################################################
+###############################################################################
 # Functions
+###############################################################################
 
-# Creates a directory if it does not already exist.
+
 def check_create_dir( strDir ):
+    """ Creates a directory if it does not already exist."""
     if not os.path.exists( strDir ):
         os.makedirs( strDir )
     return strDir
     
-# Looks for strFind in strFile. Main purpose is to find "\n\r" files which 
-# upset bedtools.
+
 def CheckForWindowsCRLF(strFile, strFind="\r\n", iLines=5):
+    """ Looks for strFind in strFile. Main purpose is to find "\n\r" files which 
+        are not compatiable with  bedtools. """
+        
     bFoundIt = False    
     iLineCount = 0
     with open(strFile,'r') as fileRead:
@@ -69,19 +83,21 @@ def CheckForWindowsCRLF(strFile, strFind="\r\n", iLines=5):
             if iLineCount >= iLines:
                 break
             
-    
     if(bFoundIt):
         raise Exception('The file ' + strFile + ' is a Windows file, which will not' + 
         ' work with bedtools. Please run "dos2unix" on the file, and try the OL' +
         ' database again.')
 
-# Adds empty elements to a list if it's too short.
 def extend_list(aIn,iCorrectLen):
+    """ This function adds empty elements to a list if it's too short. It is
+    called when loading the metadata to make empty cells for missing columns. """
     if len(aIn) < iCorrectLen:
         aIn = aIn + (iCorrectLen -len(aIn))*[""]
     return aIn
 
 def CheckNumber(strIn):
+    """ Checks to see if "strIn" is a number. If not, it will return -1. We use
+    this when we read in metadata on the different genomic annotations. """
     try:
         float(strIn)
         return float(strIn)
@@ -89,12 +105,22 @@ def CheckNumber(strIn):
         return float(-1)
         
 def SanitizeForR(strIn):
+    """ We replace '-' with "." because R does not accept hyphens/minus signs
+    in column headers. """
+    
     strOut = strIn.replace("-",".")
-    # check if first character starts with a numnber
+
     return strOut
 
 def ExtractAnnotVarsFromLine(astrLine):
-    # We indicate missing values with negative numbers.
+    """ This function reads in a line of metadata from the annotation list,
+    formats/sanitizes each element of the line for processing, and then returns
+    the elements.
+    
+    By format/sanitize, I mean things like converting strings instances of
+    numbers to integers, etc.
+    
+    """
 
     # 0=File
     # 1=Type
@@ -147,6 +173,10 @@ def ExtractAnnotVarsFromLine(astrLine):
     return strFile,strType,int(iSize),iAnnotPeaks,strAlias,int(iScoreCol),dThresh,strFunc,iEffectiveGenome
     
 def GetAnnotationSize(bedAnnotFile,bedTmp,cmdBedtools):
+    """ Takes in a bed file of an annotation, merges overlapping intervals,
+    and returns the total lenghts of the intervals in bp (iSize), and the number
+    of peaks/intervals (iPeaks).
+    """
     iSize = 0
     iPeaks = 0
     
@@ -161,8 +191,8 @@ def GetAnnotationSize(bedAnnotFile,bedTmp,cmdBedtools):
         pMerge = sp.Popen([cmdBedtools,"merge","-i","stdin"],stdin=sp.PIPE,stdout=fileTmp)
         pMerge.communicate(stdoutSort)[0]    
     
-    
-    with open(bedTmp, 'rb') as fileTmp:
+    # Count intervals/peaks, and sum size of intervals/peaks
+    with open(bedTmp, 'r') as fileTmp:
         for strLine in fileTmp:
             iPeaks+=1
             astrLine = strLine.split('\t')
@@ -173,18 +203,20 @@ def GetAnnotationSize(bedAnnotFile,bedTmp,cmdBedtools):
     
             
 def AddHeaderToFile(strFileIn,strFileOut,astrHeader):
+    """ Adds *astrheader* to the top of *strFileIn* and outputs it to
+    *strFileOut*.
+    """
     with open(strFileOut,'w') as fileOut:
-        with open(strFileIn,'rb') as fileIn:
+        with open(strFileIn,'r') as fileIn:
             fileOut.write('\t'.join(astrHeader)+"\n")
             
             for strLine in fileIn:
                 fileOut.write(strLine.strip()+"\n")
                 
-                
-            
-            
-            
 def GetColsInBedFile(bedIn):
+    """ Counts up the number of columns in a bed file. Returns -1 if there is
+    an error/ no columns.
+    """
     iCols=-1
     with open(bedIn,'r') as fileBed:
         for strLine in fileBed:
@@ -256,11 +288,11 @@ def ProcessAnnotation_ScoreBed(bedIn,bedAnnotFile,bedOut,iValCol,strFunction,iSi
     # Sort the input file
     with open(bedOut,'w') as fileBedOut:
         
-        print "Sorting annotation..."  
+        print("Sorting annotation...")  
         pSort = sp.Popen(["sort","-k1,1","-k2,2n",bedAnnotFile],stdout=sp.PIPE)
         stdoutSort = pSort.communicate()[0]
       
-        print "Running bedtools map..."
+        print("Running bedtools map...")
         #print [cmdBedtools,"map", "-a",bedIn,"-b","stdin","-c",str(iValCol),"-o",strFunction,"-prec","3"]
         pBedtools = sp.Popen([cmdBedtools,"map", "-a",bedIn,"-b","stdin","-c",str(iValCol),"-o",strFunction,"-null",".","-prec","2"],
                               stdin=sp.PIPE,stdout=fileBedOut)
@@ -323,12 +355,19 @@ def ProcessAnnotation_Overlap(bedIn,bedAnnotFile,bedOut,iSizeAnnot,iPeaksAnnot,c
     dfResult.head()        
         
     if iSizeAnnot == -1 or iPeaksAnnot == -1:
-        print "Calculating Annotation Size..."
+        print("Calculating Annotation Size...")
         iSizeAnnot,iPeaksAnnot = GetAnnotationSize(bedAnnotFile,dirTmp + os.sep + astrHeader[0] +"_temp.bed",cmdBedtools)
     # include awk script to look a
     return iSizeAnnot,dfResult,iPeaksAnnot
 
+###############################################################################
+# Program
+###############################################################################
+
+
+
 #############################################################################
+# Create out and tmp folders.
 
 dirOut = args.dirOut
 dirTmp = args.dirOut + os.sep + "tmp_files_for_bedoverlaps"
@@ -337,20 +376,14 @@ check_create_dir( dirTmp )
 astrFilesToDelete = []
 
 ############################################################################
-# Read in the list of files, proces each one in order.
+# Load the user's peak file (bedIn). 
 
-iAnnotationsProcessed = 0
-astrHeader = ["#chr","start","end"]
-aAnnotationSummary = []
 bedIn = args.bedIn
 
-## Check input file for issues:
+# Check if it has the Windows CRLF. Files with CRLF's can't be used in bedtools.
 CheckForWindowsCRLF(strFile=bedIn, strFind="\r\n", iLines=5)
 
-
-
-## Cut and sort the input file
-
+# Cut input file down to first three columns and sort it.
 with open(dirTmp+os.sep+"CutBed.bed",'w') as fileBedCut:
     pCut = sp.Popen(["cut","-f1-3",bedIn],stdout=sp.PIPE)
     stdoutCut = pCut.communicate()[0]    
@@ -362,47 +395,52 @@ with open(dirTmp+os.sep+"CutBed.bed",'w') as fileBedCut:
 bedIn = dirTmp+os.sep+"CutBed.bed"
     
 
-
 dfOverlapsResults = pd.read_table(bedIn,names=["chr","start","end"],index_col=False)
 dfOverlapsResults = dfOverlapsResults[dfOverlapsResults.chr.str.startswith("#")==False]
-#dfOverlapsResults.columns = ["test1","test2","test3"]
+print(dfOverlapsResults.head())
 
-print dfOverlapsResults.head()
 
-# Check to make sure annotation list has nine columns
+###############################################################################
+# Load the list of annotations (args.tabAnnotList)
 
-with open(args.tabAnnotList, 'rb') as fileAnnotList:
+iAnnotationsProcessed = 0
+aAnnotationSummary = []
+astrHeader = ["#chr","start","end"]
+
+
+with open(args.tabAnnotList, 'r') as fileAnnotList:
     for strLine in fileAnnotList:
         astrLine = strLine.split('\t')
 
-if len(astrLine)!=9:
-    raise Exception('Your list of annotations appears to have ' + str(len(astrLine)) +  
-    ' columns. The expected number is nine. Please check and confirm that ' +
-    ' your list of annotations has these columns \n' +
-    ' * #File - This is the path to the bed file for annotation.\n'+
-    ' * Type - Operation to carry out. For example: "bed_overlap"\n'+
-    ' * Size - This is the size of the annotation in bp. You can enter "-1" if you want the program to calculate it.\n'+
-    ' * NumPeaks  - This is the number of peaks in the annotation. You can set this to "-1" to have the program calculate it.\n'+
-    ' * Alias - An alternative, short name for the bed file\n'+
-    ' * ScoreCol - This is used when the annotation file has a score, like say evolutionary conservation. You can leave it blank if you are not doing "bed_score".\n'+
-    ' * Bedtools function - Function to apply to score column. You can leave it blank if you are not doing "bed_score".\n'+
-    ' * Threshold - Threshold to apply to score column. You can leave it blank if you are not doing "bed_score".\n'+
-    ' * EffectiveGenomeSize - This is the effective genome size to use for the annotation.')
+        # Confirm that annotation has all nine pieces of metadata.
+        if len(astrLine)!=9 and strLine[0]!="#":
+            raise Exception('Your list of annotations appears to have ' + str(len(astrLine)) +  
+            ' columns. The expected number is nine. Please check and confirm that ' +
+            ' your list of annotations has these columns \n' +
+            ' * #File - This is the path to the bed file for annotation.\n'+
+            ' * Type - Operation to carry out. For example: "bed_overlap"\n'+
+            ' * Size - This is the size of the annotation in bp. You can enter "-1" if you want the program to calculate it.\n'+
+            ' * NumPeaks  - This is the number of peaks in the annotation. You can set this to "-1" to have the program calculate it.\n'+
+            ' * Alias - An alternative, short name for the bed file\n'+
+            ' * ScoreCol - This is used when the annotation file has a score, like say evolutionary conservation. You can leave it blank if you are not doing "bed_score".\n'+
+            ' * Bedtools function - Function to apply to score column. You can leave it blank if you are not doing "bed_score".\n'+
+            ' * Threshold - Threshold to apply to score column. You can leave it blank if you are not doing "bed_score".\n'+
+            ' * EffectiveGenomeSize - This is the effective genome size to use for the annotation.')
     
-
-with open(args.tabAnnotList, 'rb') as fileAnnotList:
-    for strLine in fileAnnotList:
-        astrLine = strLine.split('\t')
         
+        # If line is not blank or commented out, add the metadata and run the 
+        # appropriate operation on the file.
         if strLine.strip() != "" and strLine[0]!="#":
             
             # Extract Information from line, prep output file
-            astrLine = extend_list(astrLine,7)
+            astrLine = extend_list(astrLine,9)
             strAnnotFile,strType,iAnnotSize,iAnnotPeaks,strAlias,iScoreCol,dThresh,strFunc,iEffectiveGenome = ExtractAnnotVarsFromLine(astrLine)
+            
             bedNextOutput = dirTmp + os.sep + "File"+str(iAnnotationsProcessed+1) + "_" + strType + ".bed" 
-            print "Processing " + os.path.basename(strAnnotFile).replace(".bed","") + " ...."
+            print("Processing " + os.path.basename(strAnnotFile).replace(".bed","") + " .... ")
             CheckForWindowsCRLF(strFile=strAnnotFile, strFind="\r\n", iLines=5)
-            # Run appropriate bedtools command to merge on output           
+            
+            # Run appropriate bedtools command.          
             if strType == "bed_score":
                 astrHeader = [strAlias+"_"+strFunc+"score"]
                 dfAnnotResults =ProcessAnnotation_ScoreBed(bedIn,strAnnotFile,bedNextOutput,iScoreCol,strFunc,iAnnotSize,"bedtools",astrHeader,dirTmp)
@@ -413,26 +451,54 @@ with open(args.tabAnnotList, 'rb') as fileAnnotList:
                 astrHeader = ["Closest_"+strAlias,"DistToClosest_"+strAlias]
                 dfAnnotResults =ProcessAnnotation_ClosestFeature(bedIn,strAnnotFile,bedNextOutput,iAnnotSize,iScoreCol,"bedtools",astrHeader)
             
-           # print dfOverlapsResults.head()
-            print dfAnnotResults.head()
-            print dfOverlapsResults.head()
+            # Print first few rows of the results, before and after merging on
+            # the new results to dfOverlapsResults. This is just to give the 
+            # user a sense of what the program is doing and can be helpful for
+            # debugging.
+            
+            print(dfAnnotResults.head())
+            print(dfOverlapsResults.head())
             dfOverlapsResults = pd.merge(dfOverlapsResults, dfAnnotResults, how='left', left_on=['chr','start','end'],right_on=['chr','start','end'])
             dfOverlapsResults = dfOverlapsResults[dfOverlapsResults.chr.str.startswith("#")==False]
-            print dfOverlapsResults.head()
+            print(dfOverlapsResults.head())
             astrFilesToDelete.append(bedNextOutput)
             
 
-            print "Effective Genome Size"
-            print str(iEffectiveGenome)
+            print("Effective Genome Size")
+            print(str(iEffectiveGenome))
             aAnnotationSummary.append([strAnnotFile,strType,strAlias,iAnnotSize,iAnnotPeaks,iScoreCol,dThresh,astrHeader[-1],iEffectiveGenome])
             iAnnotationsProcessed+=1
             
-#AddHeaderToFile(bedNextOutput,args.tabOut,astrHeader)
 
+# Write out a tab delimited file of overlap results. Each row is peak/interval
+# and the columns contain the relevant information from each annotation.
 dfOverlapsResults.to_csv(path_or_buf=args.tabOut, sep='\t',index=False)
             
 #############################################################################
-# Process results in R
+# Produce summary statistics and run hypothesis tests in R.
+
+
+""" 
+Format metadata supplied in "--additional_text". astrRowStart will have
+a row for each annotation,and each row will beging with the text supplied to
+to --additional_text.
+
+We do this so that users can combine the summary data from R from many runs
+of the bedoverlaps db. For example you may try doing peakcalling at different
+levels (qvalues) and could pass the SampleName and QValue to --additional_text
+
+
+#SampleName, QValue, Annotation
+[Sample1, 0.005, Annotation_1, ...]
+[Sample1, 0.005, Annotation_2, ...]
+[Sample1, 0.010, Annotation_1, ...]
+[Sample1, 0.010, Annotation_2, ...]
+[Sample2, 0.005, Annotation_1, ...]
+[Sample2, 0.005, Annotation_2, ...]
+[Sample2, 0.010, Annotation_1, ...]
+[Sample2, 0.010, Annotation_2, ...]
+
+"""
 
 if args.strRowStart == "":
     astrRowStart = []
@@ -444,28 +510,27 @@ else:
         for strElement in astrElement:
             astrRowStart.append(strElement)
     
-
-print "Outputting summary stats to:" +  args.tabSummaryOut+"_intermediate_tmp"
+# Print out the summary statistics
+print("Outputting summary stats to:" +  args.tabSummaryOut+"_intermediate_tmp")
 with open(args.tabSummaryOut+"_intermediate_tmp",'w') as fileSummary:
   for astrLine in aAnnotationSummary:
     fileSummary.write( "\t".join(astrRowStart + [str(x) for x in astrLine]).strip()+"\n")  
 
-#astrFilesToDelete.append(args.tabSummaryOut+"intermediate")
 
-
+# Run RScript
 astrCMD = ["Rscript", dirOverlaps + "/src/OverlapStats.R",
          "--ol_table",args.tabOut,
          "--ol_summary",args.tabSummaryOut+"_intermediate_tmp",
          "--shinyout",args.tabSummaryOut,
          "--rowmeta","\'" + " ".join(args.astrRowLabels)+ "\'"]
-print " ".join(astrCMD)
+print(" ".join(astrCMD))
 sp.call(astrCMD)
 
-#astrFilesToDelete.append(args.tabSummaryOut+"_intermediate_tmp")
-# Cleanup
+
+###############################################################################
+# Delete temporary files.
 
 if args.bDebug==False:
-    
     for strFile in astrFilesToDelete:
         os.remove(strFile)
     
