@@ -428,6 +428,7 @@ with open(args.tabAnnotList, 'r') as fileAnnotList:
             ' * EffectiveGenomeSize - This is the effective genome size to use for the annotation.')
     
         
+        
         # If line is not blank or commented out, add the metadata and run the 
         # appropriate operation on the file.
         if strLine.strip() != "" and strLine[0]!="#":
@@ -470,6 +471,7 @@ with open(args.tabAnnotList, 'r') as fileAnnotList:
             iAnnotationsProcessed+=1
             
 
+
 # Write out a tab delimited file of overlap results. Each row is peak/interval
 # and the columns contain the relevant information from each annotation.
 dfOverlapsResults.to_csv(path_or_buf=args.tabOut, sep='\t',index=False)
@@ -501,7 +503,7 @@ levels (qvalues) and could pass the SampleName and QValue to --additional_text
 """
 
 if args.strRowStart == "":
-    astrRowStart = []
+    astrRowStart = [args.bedIn]
 else:
     astrRowStart = []
     # Unpack text values
@@ -517,6 +519,10 @@ with open(args.tabSummaryOut+"_intermediate_tmp",'w') as fileSummary:
     fileSummary.write( "\t".join(astrRowStart + [str(x) for x in astrLine]).strip()+"\n")  
 
 
+if args.astrRowLabels == "":
+    args.astrRowLabels = ["BedFile"]
+    
+
 # Run RScript
 astrCMD = ["Rscript", dirOverlaps + "/src/OverlapStats.R",
          "--ol_table",args.tabOut,
@@ -530,10 +536,7 @@ sp.call(astrCMD)
 ###############################################################################
 # Delete temporary files.
 
-if args.bDebug==False:
-    for strFile in astrFilesToDelete:
-        os.remove(strFile)
-    
+if args.bDebug==False:    
     sys.stderr.write("Cleaning up... \n")
     for strFile in glob.glob(dirTmp + "/*"):
         sys.stderr.write("Deleting " + strFile + "\n")
